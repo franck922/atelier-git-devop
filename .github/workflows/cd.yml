@@ -9,19 +9,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Récupérer le code
-        uses: actions/checkout@v3
-
-      - name: Construire l'image Docker
-        run: docker build -t monapp:latest .
-
-      - name: Se connecter au serveur et déployer
-        uses: appleboy/ssh-action@v0.1.10
+      - name: Deployer sur le serveur (build sur AWS)
+        uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SERVER_HOST }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
           username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            set -e
+
+            # Aller dans le dossier du projet (ou le cloner)
+            if [ ! -d "$HOME/atelier-git-devop/.git" ]; then
+              git clone https://github.com/Franck922/atelier-git-devop.git "$HOME/atelier-git-devop"
+            fi
+
+            cd "$HOME/atelier-git-devop"
+            git pull origin main
+
+            # Build et redeploiement Docker
+            docker build -t monapp:latest .
             docker stop monapp || true
             docker rm monapp || true
             docker run -d -p 80:80 --name monapp monapp:latest
+``
