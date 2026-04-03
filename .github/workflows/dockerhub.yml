@@ -1,0 +1,42 @@
+name: CD - Deploiement via Docker Hub
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Connexion à Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build de l'image Docker
+        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/monapp:latest .
+
+      - name: Push de l'image sur Docker Hub
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/monapp:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploiement sur le serveur (pull depuis Docker Hub)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/monapp:latest
+            docker stop monapp || true
+            docker rm monapp || true
+            docker run -d -p 80:80 --name monapp ${{ secrets.DOCKERHUB_USERNAME }}/monapp:latest
