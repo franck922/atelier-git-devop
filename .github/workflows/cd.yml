@@ -31,4 +31,3 @@ jobs:
             docker stop monapp || true
             docker rm monapp || true
             docker run -d -p 80:80 --name monapp monapp:latest
-``
